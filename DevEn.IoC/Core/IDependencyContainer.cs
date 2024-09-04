@@ -1,9 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.Contracts;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DevEn.IoC.Core
 {
@@ -24,6 +20,8 @@ namespace DevEn.IoC.Core
 
         IDependencyContainer Register<TContract>(Type implementation)
             where TContract : class;
+
+        IDependencyContainer Register(Type contract, Type implementation);
 
         IDependencyContainer Register<TImplementation>(Func<TImplementation> resolver)
             where TImplementation : class;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
@@ -14,6 +15,12 @@ namespace DevEn.IoC
         private readonly IDependencyContainer _container;
         private readonly Assembly[] _assembly;
 
+        public Bootstrapper()
+            : this(AppDomain.CurrentDomain.GetAssemblies())
+        { }
+        private Bootstrapper(Assembly[] assembly)
+            : this(InternalContainer(assembly), assembly)
+        { }
         public Bootstrapper(IDependencyContainer container)
             : this(container, AppDomain.CurrentDomain.GetAssemblies())
         { }
@@ -35,12 +42,35 @@ namespace DevEn.IoC
             _assembly = assembly;
         }
 
+        private static IDependencyContainer InternalContainer(IEnumerable<Assembly> assembly)
+        {
+            var internalCont = new DependencyContainer();
+            var dependencies = assembly.ToList().SelectMany(s => s.GetTypes())
+                .Where(t => (t.GetCustomAttributes(typeof(IoCRegisterAttribute), true).Any()) && !t.IsInterface && !t.IsAbstract)
+                .Select(
+                    t => new
+                    {
+                        Interfaces = t.GetInterfaces().ToList(),
+                        Concrete = t
+                    })
+                .ToList();
+
+            dependencies.ForEach(item =>
+            {
+                if(item.Interfaces.Count > 0)
+                    item.Interfaces.ForEach( i => internalCont.Register(i, item.Concrete));
+                internalCont.Register(item.Concrete, item.Concrete);
+            });
+
+            return internalCont;
+        }
+
         public void Run()
         {
             var jobSection = (JobConfigSection)ConfigurationManager.GetSection("jobConfiguration");
             if (jobSection == null)
             {
-                Debug.WriteLine($"jobConfiguration not found on app.config");
+                Debug.WriteLine("jobConfiguration not found on app.config");
                 return;
             }
 
@@ -51,7 +81,7 @@ namespace DevEn.IoC
 
             if (jobsToRun.Count <=0)
             {
-                Debug.WriteLine($"no JobConfigElement found on AppConfig");
+                Debug.WriteLine("no JobConfigElement found on AppConfig");
                 return;
             }
 
@@ -61,7 +91,7 @@ namespace DevEn.IoC
 
             if (jobTypes.Count <=0)
             {
-                Debug.WriteLine($"no Jobs found in current assembly");
+                Debug.WriteLine("no Jobs found in current assembly");
                 return;
             }
 
@@ -79,7 +109,7 @@ namespace DevEn.IoC
 
             if (jobsToBeExecuted.Count <=0)
             {
-                Debug.WriteLine($"no Jobs To Be Executed found in AppConfig");
+                Debug.WriteLine("no Jobs To Be Executed found in AppConfig");
                 return;
             }
 

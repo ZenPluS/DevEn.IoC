@@ -59,6 +59,16 @@ namespace DevEn.IoC
             return this;
         }
 
+        public IDependencyContainer Register(Type contract, Type implementation)
+        {
+            _resolvers[contract] = (
+                contract,
+                () => Resolve(implementation)
+            );
+            Register(implementation);
+            return this;
+        }
+
         public IDependencyContainer Register<TImplementation>(Func<TImplementation> resolver)
             where TImplementation : class
         {
